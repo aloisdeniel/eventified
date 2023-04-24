@@ -135,3 +135,7 @@ abstract class Example {
   void world(String name);
 }
 ```
+
+## Examples
+
+See [the example project](https://github.com/aloisdeniel/eventified/tree/main/example).
