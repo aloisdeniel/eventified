@@ -1,0 +1,337 @@
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
+import 'package:build/build.dart';
+import 'package:code_builder/code_builder.dart';
+import 'package:eventified/eventified.dart';
+import 'package:recase/recase.dart';
+import 'package:source_gen/source_gen.dart' as gen;
+
+class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
+  @override
+  dynamic generateForAnnotatedElement(
+    Element element,
+    gen.ConstantReader annotation,
+    BuildStep buildStep,
+  ) {
+    if (element is ClassElement) {
+      final withInvoker = annotation.read('invoker').boolValue;
+      final withMetadata = annotation.read('metadata').boolValue;
+
+      final result = LibraryBuilder();
+      final baseEvent = generateBaseEvent(element, withMetadata);
+      final eventClasses = <Class>[];
+      for (final method in element.methods) {
+        eventClasses.add(generateEvent(baseEvent, method, withMetadata));
+      }
+
+      result.body.add(baseEvent.build());
+      result.body.addAll(eventClasses);
+      result.body.add(generateStreamedImpl(baseEvent, element));
+      if (withInvoker) {
+        result.body.add(generateInvokeExtension(baseEvent, element));
+      }
+
+      final emitter = DartEmitter();
+      var code = '${result.build().accept(emitter)}'.replaceAll(
+        RegExp(r'(?!late )final EventMetadata \$metadata'),
+        'late final EventMetadata \$metadata',
+      );
+
+      return code;
+    }
+  }
+
+  ClassBuilder generateBaseEvent(ClassElement element, bool withMetadata) {
+    final result = ClassBuilder()
+      ..name = '${element.name}Event'
+      ..abstract = true;
+
+    result.constructors.add(Constructor((b) => b..constant = true));
+
+    if (withMetadata) {
+      result.methods.add(
+        Method(
+          (b) => b
+            ..name = '\$metadata'
+            ..type = MethodType.getter
+            ..returns = refer('EventMetadata'),
+        ),
+      );
+    }
+
+    return result;
+  }
+
+  String createEventName(ClassBuilder baseEvent, MethodElement method) {
+    final name = method.name;
+    final suffix = baseEvent.name!;
+    return ReCase(name).pascalCase + suffix;
+  }
+
+  Class generateEvent(
+      ClassBuilder baseEvent, MethodElement method, bool withMetadata) {
+    final name = method.name;
+    final suffix = baseEvent.name!;
+    final result = ClassBuilder()
+      ..name = createEventName(baseEvent, method)
+      ..extend = refer(suffix);
+
+    final constructor = ConstructorBuilder();
+
+    final baseFactory = ConstructorBuilder()
+      ..name = name
+      ..redirect = refer(result.name!)
+      ..factory = true;
+
+    for (var parameter in method.parameters) {
+      result.fields.add(
+        Field(
+          (b) => b
+            ..name = parameter.name
+            ..type =
+                refer(parameter.type.getDisplayString(withNullability: true))
+            ..modifier = FieldModifier.final$,
+        ),
+      );
+      if (parameter.isNamed) {
+        baseFactory.optionalParameters.add(
+          Parameter(
+            (b) => b
+              ..name = parameter.name
+              ..named = parameter.isNamed
+              ..required = parameter.isRequired
+              ..type =
+                  refer(parameter.type.getDisplayString(withNullability: true)),
+          ),
+        );
+        constructor.optionalParameters.add(Parameter(
+          (b) => b
+            ..name = parameter.name
+            ..named = parameter.isNamed
+            ..required = parameter.isRequired
+            ..toThis = true,
+        ));
+      } else if (parameter.isOptional) {
+        baseFactory.optionalParameters.add(
+          Parameter(
+            (b) => b
+              ..name = parameter.name
+              ..type =
+                  refer(parameter.type.getDisplayString(withNullability: true)),
+          ),
+        );
+        constructor.optionalParameters.add(Parameter(
+          (b) => b
+            ..name = parameter.name
+            ..toThis = true,
+        ));
+      } else {
+        baseFactory.requiredParameters.add(
+          Parameter(
+            (b) => b
+              ..name = parameter.name
+              ..type =
+                  refer(parameter.type.getDisplayString(withNullability: true)),
+          ),
+        );
+        constructor.requiredParameters.add(Parameter(
+          (b) => b
+            ..name = parameter.name
+            ..toThis = true,
+        ));
+      }
+    }
+
+    // Metadata
+    if (withMetadata) {
+      final metadataArguments = StringBuffer('{');
+
+      for (var parameter in method.parameters) {
+        final metadataName = () {
+          final annotation = gen.TypeChecker.fromRuntime(EventArgument)
+              .firstAnnotationOf(parameter);
+          if (annotation != null) {
+            return annotation.getField('name')?.toStringValue() ?? name;
+          }
+          return name;
+        }();
+        if (parameter.type.nullabilitySuffix == NullabilitySuffix.question) {
+          metadataArguments.write('if(${parameter.name} != null)');
+        }
+
+        metadataArguments.write('\'$metadataName\' : ${parameter.name} ,');
+      }
+
+      metadataArguments.write('}');
+
+      final metadataName = () {
+        final annotation =
+            gen.TypeChecker.fromRuntime(Event).firstAnnotationOf(method);
+        if (annotation != null) {
+          return annotation.getField('name')?.toStringValue() ?? name;
+        }
+        return name;
+      }();
+
+      result.fields.add(
+        Field(
+          (b) => b
+            ..annotations.add(const CodeExpression(Code("override")))
+            ..name = '\$metadata'
+            ..modifier = FieldModifier.final$
+            ..type = refer('EventMetadata')
+            ..assignment =
+                Code('EventMetadata(\'$metadataName\', $metadataArguments)')
+            ..late = true // This late option is simply ignored ...
+          ,
+        ),
+      );
+    }
+
+    baseEvent.constructors.add(baseFactory.build());
+    result.constructors.add(constructor.build());
+    return result.build();
+  }
+
+  Class generateStreamedImpl(ClassBuilder baseEvent, ClassElement element) {
+    final result = ClassBuilder()
+      ..name = 'Streamed${element.name}'
+      ..implements.add(refer(element.name));
+
+    for (final method in element.methods) {
+      final impl = MethodBuilder()
+        ..name = method.name
+        ..annotations.add(const CodeExpression(Code("override")))
+        ..lambda = true
+        ..returns = refer(
+          method.returnType.getDisplayString(withNullability: true),
+        );
+
+      final body = StringBuffer();
+
+      body.write('_stream.add(');
+      body.write(createEventName(baseEvent, method));
+      body.write('(');
+
+      for (var parameter in method.parameters) {
+        if (parameter.isNamed) {
+          body.write('${parameter.name} : ${parameter.name},');
+          impl.optionalParameters.add(
+            Parameter(
+              (b) => b
+                ..name = parameter.name
+                ..named = parameter.isNamed
+                ..required = parameter.isRequired
+                ..type = refer(
+                    parameter.type.getDisplayString(withNullability: true)),
+            ),
+          );
+        } else if (parameter.isOptional) {
+          body.write('${parameter.name},');
+          impl.optionalParameters.add(
+            Parameter(
+              (b) => b
+                ..name = parameter.name
+                ..type = refer(
+                    parameter.type.getDisplayString(withNullability: true)),
+            ),
+          );
+        } else {
+          body.write('${parameter.name},');
+          impl.requiredParameters.add(
+            Parameter(
+              (b) => b
+                ..name = parameter.name
+                ..type = refer(
+                    parameter.type.getDisplayString(withNullability: true)),
+            ),
+          );
+        }
+      }
+      body.write('),)');
+      impl.body = Code(body.toString());
+      result.methods.add(impl.build());
+    }
+
+    result.fields.add(
+      Field(
+        (b) => b
+          ..name = '_stream'
+          ..type = refer('StreamController<${baseEvent.name}>')
+          ..modifier = FieldModifier.final$
+          ..assignment =
+              Code('StreamController<${baseEvent.name}>.broadcast()'),
+      ),
+    );
+
+    result.methods.add(
+      Method(
+        (b) => b
+          ..name = 'stream'
+          ..returns = refer('Stream<${baseEvent.name}>')
+          ..type = MethodType.getter
+          ..lambda = true
+          ..body = Code('_stream.stream'),
+      ),
+    );
+
+    result.methods.add(
+      Method(
+        (b) => b
+          ..name = 'dispose'
+          ..returns = refer('void')
+          ..lambda = true
+          ..body = Code('_stream.close()'),
+      ),
+    );
+
+    return result.build();
+  }
+
+  Extension generateInvokeExtension(
+      ClassBuilder baseEvent, ClassElement element) {
+    final result = ExtensionBuilder()
+      ..name = '${element.name}InvokeExtension'
+      ..on = refer(element.name);
+
+    final body = StringBuffer();
+
+    for (final method in element.methods) {
+      body.write('if(event is ');
+      body.write(createEventName(baseEvent, method));
+      body.write(') {');
+      body.write('return ');
+      body.write(method.name);
+      body.write('(');
+
+      for (var parameter in method.parameters) {
+        if (parameter.isNamed) {
+          body.write('${parameter.name} : event.${parameter.name},');
+        } else {
+          body.write('event.${parameter.name},');
+        }
+      }
+      body.write(');');
+      body.write('}');
+    }
+    body.write('throw Exception(\'Unsupported event\');');
+
+    result.methods.add(
+      Method(
+        (b) => b
+          ..name = 'invoke'
+          ..returns = refer('void')
+          ..body = Code(body.toString())
+          ..requiredParameters.add(
+            Parameter(
+              (b) => b
+                ..name = 'event'
+                ..type = refer(baseEvent.name!),
+            ),
+          ),
+      ),
+    );
+
+    return result.build();
+  }
+}

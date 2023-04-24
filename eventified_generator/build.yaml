@@ -1,0 +1,17 @@
+# Read about `build.yaml` at https://pub.dev/packages/build_config
+targets:
+  $default:
+    builders:
+      eventified_generator|eventified_generator:
+        generate_for:
+          - lib/**/*.dart
+
+builders:
+  eventified_generator:
+    import: "package:eventified_generator/builder.dart"
+    builder_factories: ["eventifiedBuilder"]
+    build_extensions: {".dart": [".variant.g.part"]}
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
+
