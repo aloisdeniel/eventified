@@ -1,39 +1,137 @@
-<!-- 
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# Eventified
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages). 
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages). 
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+Transform method calls to a stream of events.
 
 ## Getting started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+Add these dependencies to your `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  eventified: 
+
+dev_dependencies:
+  build_runner:
+  eventified_generator: 
+```
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder. 
+### 1. Declaring methods
+
+Start by declaring a class which defines a set of public methods, with a set of arguments. Annotate this class with the `@eventified` annotation.
+
+Add a `part 'example.g.dart';` declaration at the top of your file.
+
+> The return type of the methods must be `void`.
 
 ```dart
-const like = 'sample';
+import 'package:eventified/eventified.dart';
+
+part 'example.g.dart';
+
+@eventified
+abstract class Example {
+  void hello({
+    required bool world,
+    String? name,
+  });
+
+  void world(String name);
+}
 ```
 
-## Additional information
+### 2. Generate event classes and the stream implementation.
 
-TODO: Tell users more about the package: where to find more information, how to 
-contribute to the package, how to file issues, what response they can expect 
-from the package authors, and more.
+Run the build runner in your project by running this command line:
+
+```sh
+dart run build_runner build
+```
+
+> If you are using flutter, use `flutter pub run build_runner build` instead.
+
+
+### 3. Use implementation
+
+```dart
+/// Create an instance from the `Streamed` generated implementation. 
+final streamed = StreamedExample();
+
+/// Listen for events from the `stream`.
+streamed.stream.listen((event) {
+print(event);
+});
+
+/// Call methods to trigger corresponding events.
+streamed
+..hello(world: false, name: 'Jeff')
+..world('john');
+
+/// The previous calls prints this to console :
+///
+/// HelloExampleEvent(
+///   world : false,
+///   name : Jeff,
+/// )
+/// WorldExampleEvent(
+///   name : john,
+/// )
+
+/// Closes the underlying stream.
+streamed.dispose();
+```
+
+## Advanced usage
+
+The generated classes and behaviours can be customized with annotations.
+
+### Custom event names
+
+You can set a `baseEvent` name, and specific event names.
+
+
+```dart
+@Eventified(baseEvent: 'MyEvent')
+abstract class ExampleCustomEventNames {
+  @Event(name: 'HelloEvent')
+  void hello({
+    required bool world,
+    String? name,
+  });
+
+  @Event(name: 'WorldEvent')
+  void world(String name);
+}
+```
+
+### Add metadata
+
+You can generate a `$metadata` property which allows to reflects the event and its arguments at runtime. This might be particularly useful for serialization purpose.
+
+```dart
+@Eventified(metadata: true)
+abstract class Example {
+  void hello({
+    required bool world,
+    String? name,
+  });
+
+  void world(String name);
+}
+```
+
+The metadata keys can also be customized independently with `Event` and `EventArgument` annotations.
+
+```dart
+@Eventified(metadata: true)
+abstract class Example {
+  @Event(metadata: 'Hello')
+  void hello({
+    required bool world,
+    @EventArgument(metadata: 'Name') String? name,
+  });
+
+  void world(String name);
+}
+```

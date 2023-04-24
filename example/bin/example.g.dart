@@ -15,8 +15,6 @@ abstract class ExampleEvent {
   }) = HelloExampleEvent;
 
   factory ExampleEvent.world(String name) = WorldExampleEvent;
-
-  EventMetadata get $metadata;
 }
 
 class HelloExampleEvent extends ExampleEvent {
@@ -30,10 +28,10 @@ class HelloExampleEvent extends ExampleEvent {
   final String? name;
 
   @override
-  late final EventMetadata $metadata = EventMetadata('Hello', {
-    'hello': world,
-    if (name != null) 'Name': name,
-  });
+  String toString() => '''HelloExampleEvent(
+  world : $world,
+  name : $name,
+)''';
 }
 
 class WorldExampleEvent extends ExampleEvent {
@@ -42,9 +40,9 @@ class WorldExampleEvent extends ExampleEvent {
   final String name;
 
   @override
-  late final EventMetadata $metadata = EventMetadata('world', {
-    'world': name,
-  });
+  String toString() => '''WorldExampleEvent(
+  name : $name,
+)''';
 }
 
 class StreamedExample implements Example {
@@ -89,21 +87,117 @@ extension ExampleInvokeExtension on Example {
   }
 }
 
-abstract class ExampleNoInvokerEvent {
-  const ExampleNoInvokerEvent();
+abstract class ExampleWithMetadataEvent {
+  const ExampleWithMetadataEvent();
 
-  factory ExampleNoInvokerEvent.hello({
+  factory ExampleWithMetadataEvent.hello({
     required bool world,
     String? name,
-  }) = HelloExampleNoInvokerEvent;
+  }) = HelloExampleWithMetadataEvent;
 
-  factory ExampleNoInvokerEvent.world(String name) = WorldExampleNoInvokerEvent;
+  factory ExampleWithMetadataEvent.world(String name) =
+      WorldExampleWithMetadataEvent;
 
   EventMetadata get $metadata;
 }
 
-class HelloExampleNoInvokerEvent extends ExampleNoInvokerEvent {
-  HelloExampleNoInvokerEvent({
+class HelloExampleWithMetadataEvent extends ExampleWithMetadataEvent {
+  HelloExampleWithMetadataEvent({
+    required this.world,
+    this.name,
+  });
+
+  final bool world;
+
+  final String? name;
+
+  @override
+  late final EventMetadata $metadata = EventMetadata('hello', {
+    'hello': world,
+    if (name != null) 'hello': name,
+  });
+
+  @override
+  String toString() => '''HelloExampleWithMetadataEvent(
+  world : $world,
+  name : $name,
+)''';
+}
+
+class WorldExampleWithMetadataEvent extends ExampleWithMetadataEvent {
+  WorldExampleWithMetadataEvent(this.name);
+
+  final String name;
+
+  @override
+  late final EventMetadata $metadata = EventMetadata('world', {
+    'world': name,
+  });
+
+  @override
+  String toString() => '''WorldExampleWithMetadataEvent(
+  name : $name,
+)''';
+}
+
+class StreamedExampleWithMetadata implements ExampleWithMetadata {
+  final StreamController<ExampleWithMetadataEvent> _stream =
+      StreamController<ExampleWithMetadataEvent>.broadcast();
+
+  @override
+  void hello({
+    required bool world,
+    String? name,
+  }) =>
+      _stream.add(
+        HelloExampleWithMetadataEvent(
+          world: world,
+          name: name,
+        ),
+      );
+  @override
+  void world(String name) => _stream.add(
+        WorldExampleWithMetadataEvent(
+          name,
+        ),
+      );
+  Stream<ExampleWithMetadataEvent> get stream => _stream.stream;
+  void dispose() => _stream.close();
+}
+
+extension ExampleWithMetadataInvokeExtension on ExampleWithMetadata {
+  void invoke(ExampleWithMetadataEvent event) {
+    if (event is HelloExampleWithMetadataEvent) {
+      return hello(
+        world: event.world,
+        name: event.name,
+      );
+    }
+    if (event is WorldExampleWithMetadataEvent) {
+      return world(
+        event.name,
+      );
+    }
+    throw Exception('Unsupported event');
+  }
+}
+
+abstract class ExampleCustomMetadataEvent {
+  const ExampleCustomMetadataEvent();
+
+  factory ExampleCustomMetadataEvent.hello({
+    required bool world,
+    String? name,
+  }) = HelloExampleCustomMetadataEvent;
+
+  factory ExampleCustomMetadataEvent.world(String name) =
+      WorldExampleCustomMetadataEvent;
+
+  EventMetadata get $metadata;
+}
+
+class HelloExampleCustomMetadataEvent extends ExampleCustomMetadataEvent {
+  HelloExampleCustomMetadataEvent({
     required this.world,
     this.name,
   });
@@ -117,6 +211,98 @@ class HelloExampleNoInvokerEvent extends ExampleNoInvokerEvent {
     'hello': world,
     if (name != null) 'Name': name,
   });
+
+  @override
+  String toString() => '''HelloExampleCustomMetadataEvent(
+  world : $world,
+  name : $name,
+)''';
+}
+
+class WorldExampleCustomMetadataEvent extends ExampleCustomMetadataEvent {
+  WorldExampleCustomMetadataEvent(this.name);
+
+  final String name;
+
+  @override
+  late final EventMetadata $metadata = EventMetadata('world', {
+    'world': name,
+  });
+
+  @override
+  String toString() => '''WorldExampleCustomMetadataEvent(
+  name : $name,
+)''';
+}
+
+class StreamedExampleCustomMetadata implements ExampleCustomMetadata {
+  final StreamController<ExampleCustomMetadataEvent> _stream =
+      StreamController<ExampleCustomMetadataEvent>.broadcast();
+
+  @override
+  void hello({
+    required bool world,
+    String? name,
+  }) =>
+      _stream.add(
+        HelloExampleCustomMetadataEvent(
+          world: world,
+          name: name,
+        ),
+      );
+  @override
+  void world(String name) => _stream.add(
+        WorldExampleCustomMetadataEvent(
+          name,
+        ),
+      );
+  Stream<ExampleCustomMetadataEvent> get stream => _stream.stream;
+  void dispose() => _stream.close();
+}
+
+extension ExampleCustomMetadataInvokeExtension on ExampleCustomMetadata {
+  void invoke(ExampleCustomMetadataEvent event) {
+    if (event is HelloExampleCustomMetadataEvent) {
+      return hello(
+        world: event.world,
+        name: event.name,
+      );
+    }
+    if (event is WorldExampleCustomMetadataEvent) {
+      return world(
+        event.name,
+      );
+    }
+    throw Exception('Unsupported event');
+  }
+}
+
+abstract class ExampleNoInvokerEvent {
+  const ExampleNoInvokerEvent();
+
+  factory ExampleNoInvokerEvent.hello({
+    required bool world,
+    String? name,
+  }) = HelloExampleNoInvokerEvent;
+
+  factory ExampleNoInvokerEvent.world(String name) = WorldExampleNoInvokerEvent;
+}
+
+class HelloExampleNoInvokerEvent extends ExampleNoInvokerEvent {
+  HelloExampleNoInvokerEvent({
+    required this.world,
+    this.name,
+  });
+
+  final bool world;
+
+  final String? name;
+
+  @override
+  String toString() => '''HelloExampleNoInvokerEvent(
+  world : $world,
+  name : $name,
+)''';
 }
 
 class WorldExampleNoInvokerEvent extends ExampleNoInvokerEvent {
@@ -125,9 +311,9 @@ class WorldExampleNoInvokerEvent extends ExampleNoInvokerEvent {
   final String name;
 
   @override
-  late final EventMetadata $metadata = EventMetadata('world', {
-    'world': name,
-  });
+  String toString() => '''WorldExampleNoInvokerEvent(
+  name : $name,
+)''';
 }
 
 class StreamedExampleNoInvoker implements ExampleNoInvoker {
@@ -155,20 +341,19 @@ class StreamedExampleNoInvoker implements ExampleNoInvoker {
   void dispose() => _stream.close();
 }
 
-abstract class ExampleNoMetadataEvent {
-  const ExampleNoMetadataEvent();
+abstract class MyEvent {
+  const MyEvent();
 
-  factory ExampleNoMetadataEvent.hello({
+  factory MyEvent.hello({
     required bool world,
     String? name,
-  }) = HelloExampleNoMetadataEvent;
+  }) = HelloEvent;
 
-  factory ExampleNoMetadataEvent.world(String name) =
-      WorldExampleNoMetadataEvent;
+  factory MyEvent.world(String name) = WorldEvent;
 }
 
-class HelloExampleNoMetadataEvent extends ExampleNoMetadataEvent {
-  HelloExampleNoMetadataEvent({
+class HelloEvent extends MyEvent {
+  HelloEvent({
     required this.world,
     this.name,
   });
@@ -176,17 +361,28 @@ class HelloExampleNoMetadataEvent extends ExampleNoMetadataEvent {
   final bool world;
 
   final String? name;
+
+  @override
+  String toString() => '''HelloEvent(
+  world : $world,
+  name : $name,
+)''';
 }
 
-class WorldExampleNoMetadataEvent extends ExampleNoMetadataEvent {
-  WorldExampleNoMetadataEvent(this.name);
+class WorldEvent extends MyEvent {
+  WorldEvent(this.name);
 
   final String name;
+
+  @override
+  String toString() => '''WorldEvent(
+  name : $name,
+)''';
 }
 
-class StreamedExampleNoMetadata implements ExampleNoMetadata {
-  final StreamController<ExampleNoMetadataEvent> _stream =
-      StreamController<ExampleNoMetadataEvent>.broadcast();
+class StreamedExampleCustomEventNames implements ExampleCustomEventNames {
+  final StreamController<MyEvent> _stream =
+      StreamController<MyEvent>.broadcast();
 
   @override
   void hello({
@@ -194,17 +390,17 @@ class StreamedExampleNoMetadata implements ExampleNoMetadata {
     String? name,
   }) =>
       _stream.add(
-        HelloExampleNoMetadataEvent(
+        HelloEvent(
           world: world,
           name: name,
         ),
       );
   @override
   void world(String name) => _stream.add(
-        WorldExampleNoMetadataEvent(
+        WorldEvent(
           name,
         ),
       );
-  Stream<ExampleNoMetadataEvent> get stream => _stream.stream;
+  Stream<MyEvent> get stream => _stream.stream;
   void dispose() => _stream.close();
 }

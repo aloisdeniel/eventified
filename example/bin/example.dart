@@ -7,22 +7,46 @@ part 'example.g.dart';
 void main(List<String> args) {
   final streamed = StreamedExample();
 
+  /// Listen for events.
   streamed.stream.listen((event) {
-    print(
-        '${event.$metadata.name} : ${event.$metadata.arguments.entries.join(', ')}');
+    print(event);
   });
 
+  /// Call methods to trigger corresponding events.
   streamed
     ..hello(world: false, name: 'Jeff')
     ..world('john');
+
+  /// Closes the underlying stream.
+  streamed.dispose();
 }
 
 @eventified
 abstract class Example {
-  @Event('Hello')
   void hello({
     required bool world,
-    @EventArgument('Name') String? name,
+    String? name,
+  });
+
+  void world(String name);
+}
+
+@Eventified(metadata: true)
+abstract class ExampleWithMetadata {
+  void hello({
+    required bool world,
+    String? name,
+  });
+
+  void world(String name);
+}
+
+@Eventified(metadata: true)
+abstract class ExampleCustomMetadata {
+  @Event(metadata: 'Hello')
+  void hello({
+    required bool world,
+    @EventArgument(metadata: 'Name') String? name,
   });
 
   void world(String name);
@@ -30,21 +54,25 @@ abstract class Example {
 
 @Eventified(invoker: false)
 abstract class ExampleNoInvoker {
-  @Event('Hello')
-  void hello({
-    required bool world,
-    @EventArgument('Name') String? name,
-  });
-
-  void world(String name);
-}
-
-@Eventified(invoker: false, metadata: false)
-abstract class ExampleNoMetadata {
   void hello({
     required bool world,
     String? name,
   });
 
+  void world(String name);
+}
+
+@Eventified(
+  baseEvent: 'MyEvent',
+  invoker: false,
+)
+abstract class ExampleCustomEventNames {
+  @Event(name: 'HelloEvent')
+  void hello({
+    required bool world,
+    String? name,
+  });
+
+  @Event(name: 'WorldEvent')
   void world(String name);
 }

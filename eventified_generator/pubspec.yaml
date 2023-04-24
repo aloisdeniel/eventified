@@ -1,14 +1,14 @@
 name: eventified_generator
-description: A starting point for Dart libraries or applications.
-version: 1.0.0
-# homepage: https://www.example.com
+description: Transform method calls to a stream of events.
+version: 0.1.0
+homepage: https://github.com/aloisdeniel/eventified
 
 
 environment:
   sdk: '>=2.18.0 <3.0.0'
   
 dependencies:
-  eventified: ^0.1.0-alpha.1
+  eventified: ^0.1.0
   analyzer: '>=4.6.0 <6.0.0'
   build: ^2.3.1
   source_gen: ^1.2.7

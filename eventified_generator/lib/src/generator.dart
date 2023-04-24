@@ -20,7 +20,10 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
       final result = LibraryBuilder();
       final baseEvent = generateBaseEvent(element, withMetadata);
       final eventClasses = <Class>[];
-      for (final method in element.methods) {
+      for (final method in element.methods.where((m) => m.isPublic)) {
+        if (!method.returnType.isVoid) {
+          throw Exception('Functions must have a return type of void');
+        }
         eventClasses.add(generateEvent(baseEvent, method, withMetadata));
       }
 
@@ -42,8 +45,18 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
   }
 
   ClassBuilder generateBaseEvent(ClassElement element, bool withMetadata) {
+    final name = () {
+      final annotation =
+          gen.TypeChecker.fromRuntime(Eventified).firstAnnotationOf(element);
+      if (annotation != null) {
+        final customName = annotation.getField('baseEvent')?.toStringValue();
+        if (customName != null) return customName;
+      }
+      return '${element.name}Event';
+    }();
+
     final result = ClassBuilder()
-      ..name = '${element.name}Event'
+      ..name = name
       ..abstract = true;
 
     result.constructors.add(Constructor((b) => b..constant = true));
@@ -63,8 +76,16 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
   }
 
   String createEventName(ClassBuilder baseEvent, MethodElement method) {
+    final annotation =
+        gen.TypeChecker.fromRuntime(Event).firstAnnotationOf(method);
+    if (annotation != null) {
+      final customName = annotation.getField('name')?.toStringValue();
+      if (customName != null) return customName;
+    }
+
     final name = method.name;
     final suffix = baseEvent.name!;
+
     return ReCase(name).pascalCase + suffix;
   }
 
@@ -151,7 +172,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
           final annotation = gen.TypeChecker.fromRuntime(EventArgument)
               .firstAnnotationOf(parameter);
           if (annotation != null) {
-            return annotation.getField('name')?.toStringValue() ?? name;
+            return annotation.getField('metadata')?.toStringValue() ?? name;
           }
           return name;
         }();
@@ -168,7 +189,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
         final annotation =
             gen.TypeChecker.fromRuntime(Event).firstAnnotationOf(method);
         if (annotation != null) {
-          return annotation.getField('name')?.toStringValue() ?? name;
+          return annotation.getField('metadata')?.toStringValue() ?? name;
         }
         return name;
       }();
@@ -188,6 +209,34 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
       );
     }
 
+    // toString
+    final toStringBody = StringBuffer();
+    toStringBody.write("'''");
+    toStringBody.write(result.name!);
+    toStringBody.writeln('(');
+    for (var field in result.fields.build()) {
+      if (field.name != '\$metadata') {
+        toStringBody.write('  ');
+        toStringBody.write(field.name);
+        toStringBody.write(' : \$');
+        toStringBody.write(field.name);
+        toStringBody.writeln(',');
+      }
+    }
+    toStringBody.write(')');
+    toStringBody.write("'''");
+
+    result.methods.add(
+      Method(
+        (b) => b
+          ..annotations.add(const CodeExpression(Code("override")))
+          ..name = 'toString'
+          ..returns = refer('String')
+          ..lambda = true
+          ..body = Code(toStringBody.toString()),
+      ),
+    );
+
     baseEvent.constructors.add(baseFactory.build());
     result.constructors.add(constructor.build());
     return result.build();
@@ -198,7 +247,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
       ..name = 'Streamed${element.name}'
       ..implements.add(refer(element.name));
 
-    for (final method in element.methods) {
+    for (final method in element.methods.where((m) => m.isPublic)) {
       final impl = MethodBuilder()
         ..name = method.name
         ..annotations.add(const CodeExpression(Code("override")))
@@ -296,7 +345,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
 
     final body = StringBuffer();
 
-    for (final method in element.methods) {
+    for (final method in element.methods.where((m) => m.isPublic)) {
       body.write('if(event is ');
       body.write(createEventName(baseEvent, method));
       body.write(') {');

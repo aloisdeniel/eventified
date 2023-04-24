@@ -1,8 +1,8 @@
 name: example
 publish_to: none
-description: A sample command-line application.
+description: An example usage for the eventified_generator package.
 version: 1.0.0
-# homepage: https://www.example.com
+homepage: https://github.com/aloisdeniel/eventified
 
 environment:
   sdk: '>=2.18.3 <3.0.0'
