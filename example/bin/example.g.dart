@@ -113,8 +113,8 @@ class HelloExampleWithMetadataEvent extends ExampleWithMetadataEvent {
 
   @override
   late final EventMetadata $metadata = EventMetadata('hello', {
-    'hello': world,
-    if (name != null) 'hello': name,
+    'world': world,
+    if (name != null) 'name': name,
   });
 
   @override
@@ -131,7 +131,7 @@ class WorldExampleWithMetadataEvent extends ExampleWithMetadataEvent {
 
   @override
   late final EventMetadata $metadata = EventMetadata('world', {
-    'world': name,
+    'name': name,
   });
 
   @override
@@ -208,7 +208,7 @@ class HelloExampleCustomMetadataEvent extends ExampleCustomMetadataEvent {
 
   @override
   late final EventMetadata $metadata = EventMetadata('Hello', {
-    'hello': world,
+    'world': world,
     if (name != null) 'Name': name,
   });
 
@@ -226,7 +226,7 @@ class WorldExampleCustomMetadataEvent extends ExampleCustomMetadataEvent {
 
   @override
   late final EventMetadata $metadata = EventMetadata('world', {
-    'world': name,
+    'name': name,
   });
 
   @override

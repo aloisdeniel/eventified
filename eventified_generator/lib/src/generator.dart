@@ -174,7 +174,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
           if (annotation != null) {
             return annotation.getField('metadata')?.toStringValue() ?? name;
           }
-          return name;
+          return parameter.name;
         }();
         if (parameter.type.nullabilitySuffix == NullabilitySuffix.question) {
           metadataArguments.write('if(${parameter.name} != null)');
