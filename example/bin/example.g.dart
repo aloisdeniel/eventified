@@ -6,36 +6,41 @@ part of 'example.dart';
 // EventifiedGenerator
 // **************************************************************************
 
-abstract class ExampleEvent {
+sealed class ExampleEvent {
   const ExampleEvent();
 
   factory ExampleEvent.hello({
     required bool world,
     String? name,
+    int withDefault,
   }) = HelloExampleEvent;
 
   factory ExampleEvent.world(String name) = WorldExampleEvent;
 }
 
 class HelloExampleEvent extends ExampleEvent {
-  HelloExampleEvent({
+  const HelloExampleEvent({
     required this.world,
     this.name,
+    this.withDefault = 42,
   });
 
   final bool world;
 
   final String? name;
 
+  final int withDefault;
+
   @override
   String toString() => '''HelloExampleEvent(
   world : $world,
   name : $name,
+  withDefault : $withDefault,
 )''';
 }
 
 class WorldExampleEvent extends ExampleEvent {
-  WorldExampleEvent(this.name);
+  const WorldExampleEvent(this.name);
 
   final String name;
 
@@ -53,20 +58,25 @@ class StreamedExample implements Example {
   void hello({
     required bool world,
     String? name,
+    int withDefault = 42,
   }) =>
       _stream.add(
         HelloExampleEvent(
           world: world,
           name: name,
+          withDefault: withDefault,
         ),
       );
+
   @override
   void world(String name) => _stream.add(
         WorldExampleEvent(
           name,
         ),
       );
+
   Stream<ExampleEvent> get stream => _stream.stream;
+
   void dispose() => _stream.close();
 }
 
@@ -76,6 +86,7 @@ extension ExampleInvokeExtension on Example {
       return hello(
         world: event.world,
         name: event.name,
+        withDefault: event.withDefault,
       );
     }
     if (event is WorldExampleEvent) {
@@ -87,7 +98,7 @@ extension ExampleInvokeExtension on Example {
   }
 }
 
-abstract class ExampleWithMetadataEvent {
+sealed class ExampleWithMetadataEvent {
   const ExampleWithMetadataEvent();
 
   factory ExampleWithMetadataEvent.hello({
@@ -155,13 +166,16 @@ class StreamedExampleWithMetadata implements ExampleWithMetadata {
           name: name,
         ),
       );
+
   @override
   void world(String name) => _stream.add(
         WorldExampleWithMetadataEvent(
           name,
         ),
       );
+
   Stream<ExampleWithMetadataEvent> get stream => _stream.stream;
+
   void dispose() => _stream.close();
 }
 
@@ -182,7 +196,7 @@ extension ExampleWithMetadataInvokeExtension on ExampleWithMetadata {
   }
 }
 
-abstract class ExampleCustomMetadataEvent {
+sealed class ExampleCustomMetadataEvent {
   const ExampleCustomMetadataEvent();
 
   factory ExampleCustomMetadataEvent.hello({
@@ -250,13 +264,16 @@ class StreamedExampleCustomMetadata implements ExampleCustomMetadata {
           name: name,
         ),
       );
+
   @override
   void world(String name) => _stream.add(
         WorldExampleCustomMetadataEvent(
           name,
         ),
       );
+
   Stream<ExampleCustomMetadataEvent> get stream => _stream.stream;
+
   void dispose() => _stream.close();
 }
 
@@ -277,7 +294,7 @@ extension ExampleCustomMetadataInvokeExtension on ExampleCustomMetadata {
   }
 }
 
-abstract class ExampleNoInvokerEvent {
+sealed class ExampleNoInvokerEvent {
   const ExampleNoInvokerEvent();
 
   factory ExampleNoInvokerEvent.hello({
@@ -289,7 +306,7 @@ abstract class ExampleNoInvokerEvent {
 }
 
 class HelloExampleNoInvokerEvent extends ExampleNoInvokerEvent {
-  HelloExampleNoInvokerEvent({
+  const HelloExampleNoInvokerEvent({
     required this.world,
     this.name,
   });
@@ -306,7 +323,7 @@ class HelloExampleNoInvokerEvent extends ExampleNoInvokerEvent {
 }
 
 class WorldExampleNoInvokerEvent extends ExampleNoInvokerEvent {
-  WorldExampleNoInvokerEvent(this.name);
+  const WorldExampleNoInvokerEvent(this.name);
 
   final String name;
 
@@ -331,17 +348,20 @@ class StreamedExampleNoInvoker implements ExampleNoInvoker {
           name: name,
         ),
       );
+
   @override
   void world(String name) => _stream.add(
         WorldExampleNoInvokerEvent(
           name,
         ),
       );
+
   Stream<ExampleNoInvokerEvent> get stream => _stream.stream;
+
   void dispose() => _stream.close();
 }
 
-abstract class MyEvent {
+sealed class MyEvent {
   const MyEvent();
 
   factory MyEvent.hello({
@@ -353,7 +373,7 @@ abstract class MyEvent {
 }
 
 class HelloEvent extends MyEvent {
-  HelloEvent({
+  const HelloEvent({
     required this.world,
     this.name,
   });
@@ -370,7 +390,7 @@ class HelloEvent extends MyEvent {
 }
 
 class WorldEvent extends MyEvent {
-  WorldEvent(this.name);
+  const WorldEvent(this.name);
 
   final String name;
 
@@ -395,12 +415,15 @@ class StreamedExampleCustomEventNames implements ExampleCustomEventNames {
           name: name,
         ),
       );
+
   @override
   void world(String name) => _stream.add(
         WorldEvent(
           name,
         ),
       );
+
   Stream<MyEvent> get stream => _stream.stream;
+
   void dispose() => _stream.close();
 }

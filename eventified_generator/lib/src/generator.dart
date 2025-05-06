@@ -57,7 +57,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
 
     final result = ClassBuilder()
       ..name = name
-      ..abstract = true;
+      ..sealed = true;
 
     result.constructors.add(Constructor((b) => b..constant = true));
 
@@ -97,7 +97,7 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
       ..name = createEventName(baseEvent, method)
       ..extend = refer(suffix);
 
-    final constructor = ConstructorBuilder();
+    final constructor = ConstructorBuilder()..constant = !withMetadata;
 
     final baseFactory = ConstructorBuilder()
       ..name = name
@@ -130,6 +130,9 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
             ..name = parameter.name
             ..named = parameter.isNamed
             ..required = parameter.isRequired
+            ..defaultTo = parameter.hasDefaultValue
+                ? Code(parameter.defaultValueCode ?? '')
+                : null
             ..toThis = true,
         ));
       } else if (parameter.isOptional) {
@@ -144,6 +147,9 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
         constructor.optionalParameters.add(Parameter(
           (b) => b
             ..name = parameter.name
+            ..defaultTo = parameter.hasDefaultValue
+                ? Code(parameter.defaultValueCode ?? '')
+                : null
             ..toThis = true,
         ));
       } else {
@@ -158,6 +164,9 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
         constructor.requiredParameters.add(Parameter(
           (b) => b
             ..name = parameter.name
+            ..defaultTo = parameter.hasDefaultValue
+                ? Code(parameter.defaultValueCode ?? '')
+                : null
             ..toThis = true,
         ));
       }
@@ -271,6 +280,9 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
                 ..name = parameter.name
                 ..named = parameter.isNamed
                 ..required = parameter.isRequired
+                ..defaultTo = parameter.hasDefaultValue
+                    ? Code(parameter.defaultValueCode ?? '')
+                    : null
                 ..type = refer(
                     parameter.type.getDisplayString(withNullability: true)),
             ),
@@ -281,6 +293,9 @@ class EventifiedGenerator extends gen.GeneratorForAnnotation<Eventified> {
             Parameter(
               (b) => b
                 ..name = parameter.name
+                ..defaultTo = parameter.hasDefaultValue
+                    ? Code(parameter.defaultValueCode ?? '')
+                    : null
                 ..type = refer(
                     parameter.type.getDisplayString(withNullability: true)),
             ),

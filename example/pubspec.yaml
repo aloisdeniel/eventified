@@ -5,7 +5,7 @@ version: 1.0.0
 homepage: https://github.com/aloisdeniel/eventified
 
 environment:
-  sdk: '>=2.18.3 <3.0.0'
+  sdk: '>=3.4.0'
 
 dependencies:
   eventified: 
