@@ -1,3 +1,8 @@
+
+## 0.3.0
+
+- Upgraded dependencies.
+
 ## 0.2.0
 
 - Added support for default values.
