@@ -1,6 +1,6 @@
 name: eventified_generator
 description: Transform method calls to a stream of events.
-version: 0.3.0
+version: 0.4.0
 homepage: https://github.com/aloisdeniel/eventified
 
 environment:

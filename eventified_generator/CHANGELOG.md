@@ -1,3 +1,6 @@
+## 0.4.0
+
+- Downgraded minimal dependency constraints for analyzer.
 
 ## 0.3.0
 
